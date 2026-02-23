@@ -4,16 +4,16 @@ import io
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(page_title="WMS Sonda", layout="wide")
+st.set_page_config(page_title="WMS Sonda Pro", layout="wide")
 
 # ==========================================
-# 🔗 ENLACES DE GOOGLE SHEETS
+# 🔗 ENLACES DE GOOGLE SHEETS (CSV EXPORT)
 # ==========================================
 URL_INVENTARIO = "https://docs.google.com/spreadsheets/d/135jZiPzcgSz64NYybCYa8PIu8LAoyjk5IIn6NrEHjZ4/export?format=csv"
 URL_ENTRADAS = "https://docs.google.com/spreadsheets/d/1mczk_zLZqypIXJY6uQqFj_5ioLHybasecxgNKzlopwc/export?format=csv"
 URL_SALIDAS = "https://docs.google.com/spreadsheets/d/1aB-ODOa6-npqxX_WmWTOQuxYoWE1KxVAGNoSOcYoFck/export?format=csv" 
 
-# --- 2. ESTILOS REFINADOS: JARRA REDONDA, OLA DINÁMICA Y FUENTE SUAVE ---
+# --- 2. ESTILOS CSS REFINADOS ---
 def local_css():
     st.markdown("""
     <style>
@@ -21,73 +21,67 @@ def local_css():
 
     html, body, [class*="css"] { 
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        background-color: #ffffff;
     }
     
-    /* Contenedor Principal de los KPIs */
     .kpi-container {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 80px;
+        gap: 60px;
         background: #ffffff;
-        border-radius: 30px;
-        padding: 50px;
-        margin-bottom: 40px;
-        border: 1px solid #f8fafc;
+        border-radius: 25px;
+        padding: 40px;
+        margin-bottom: 30px;
+        border: 1px solid #f1f5f9;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
 
     .kpi-text-box h1 { 
-        font-size: 5.5rem !important; 
+        font-size: 5rem !important; 
         color: #0f172a !important; 
         margin: 0; 
         font-weight: 800 !important;
-        letter-spacing: -4px;
-        line-height: 0.9;
+        letter-spacing: -3px;
+        line-height: 0.8;
     }
 
     .label-kpi {
         color: #94a3b8;
         font-weight: 600;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
-        font-size: 0.9rem;
-        margin-bottom: 5px;
+        font-size: 0.85rem;
     }
 
-    /* LA JARRA REDONDA (ESFERA) */
     .water-sphere {
-        width: 190px;
-        height: 190px;
-        background-color: #f1f5f9;
+        width: 170px;
+        height: 170px;
+        background-color: #f8fafc;
         border-radius: 50%;
         position: relative;
         overflow: hidden;
-        border: 1px solid #f1f5f9; /* Delineado casi imperceptible */
-        box-shadow: inset 0 5px 15px rgba(0,0,0,0.03), 0 10px 30px rgba(0,0,0,0.02);
+        border: 2px solid #f1f5f9;
     }
 
-    /* EL EFECTO DE OLA DINÁMICO */
     .wave {
         position: absolute;
         bottom: 0;
         left: -50%;
         width: 200%;
         height: 200%;
-        background: rgba(2, 132, 199, 0.85); /* Azul más fuerte */
+        background: rgba(2, 132, 199, 0.8);
         border-radius: 40%;
-        animation: wave-animation 7s infinite linear;
-        transition: top 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: wave-animation 6s infinite linear;
         top: var(--wave-top);
         z-index: 2;
+        transition: top 1s ease-in-out;
     }
 
     .wave-back {
-        background: rgba(125, 211, 252, 0.4); /* Azul claro de fondo */
-        animation: wave-animation 11s infinite linear;
-        border-radius: 35%;
+        background: rgba(125, 211, 252, 0.4);
+        animation: wave-animation 9s infinite linear;
         z-index: 1;
-        top: calc(var(--wave-top) - 4%);
+        top: calc(var(--wave-top) - 5%);
     }
 
     @keyframes wave-animation {
@@ -95,7 +89,6 @@ def local_css():
         to { transform: rotate(360deg); }
     }
 
-    /* TEXTO DENTRO DE LA JARRA */
     .water-percentage {
         position: absolute;
         width: 100%;
@@ -104,33 +97,9 @@ def local_css():
         transform: translate(-50%, -50%);
         text-align: center;
         color: #1e293b;
-        font-weight: 400; /* Fuente suave */
-        font-size: 1.7rem;
+        font-weight: 800;
+        font-size: 1.5rem;
         z-index: 10;
-        pointer-events: none;
-        text-shadow: 0 0 10px rgba(255,255,255,0.5);
-    }
-
-    /* Botones de Cuentas Estilizados */
-    div.stButton > button {
-        background-color: #ffffff;
-        color: #64748b;
-        border: 1px solid #f1f5f9;
-        border-radius: 15px;
-        padding: 10px 20px;
-        font-weight: 600 !important;
-        transition: all 0.3s ease;
-        font-size: 0.85rem;
-    }
-    div.stButton > button:hover {
-        border-color: #38bdf8 !important;
-        color: #0369a1 !important;
-        background-color: #f0f9ff !important;
-    }
-
-    /* Quitar bordes de la tabla de Streamlit */
-    [data-testid="stDataFrame"] {
-        border: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -144,106 +113,134 @@ def cargar_datos():
         try:
             df = pd.read_csv(url)
             df.columns = df.columns.str.strip()
+            # Limpieza de datos numéricos
             if 'Cantidad' in df.columns:
                 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce').fillna(0)
             if 'Fecha' in df.columns:
                 df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
             return df
-        except:
+        except Exception as e:
+            st.error(f"Error cargando {url}: {e}")
             return pd.DataFrame()
     return fetch(URL_INVENTARIO), fetch(URL_ENTRADAS), fetch(URL_SALIDAS)
 
 df_inv_raw, df_ent_raw, df_sal_raw = cargar_datos()
 
-# --- 4. ESTADO DE LA SESIÓN ---
-if 'cuenta_f' not in st.session_state:
-    st.session_state.cuenta_f = "Todas"
+# --- 4. LÓGICA DE DISTRIBUCIÓN (SIMULACIÓN DE LA MACRO) ---
+def procesar_distribucion(df_inventario, sku_buscado, cantidad_pedida):
+    """Réplica de la macro de Excel para distribuir stock por lotes y ubicaciones"""
+    inv = df_inventario[df_inventario['SKU'] == sku_buscado].copy()
+    asignaciones = []
+    restante = cantidad_pedida
+    
+    for idx, row in inv.iterrows():
+        if restante <= 0: break
+        if row['Cantidad'] > 0:
+            tomar = min(row['Cantidad'], restante)
+            asignaciones.append({
+                'Lote': row['Lote'],
+                'Ubicación': row['Ubicación'],
+                'Cantidad Sacada': tomar
+            })
+            restante -= tomar
+            
+    return pd.DataFrame(asignaciones), restante
 
-# --- 5. BARRA LATERAL (SIDEBAR) ---
+# --- 5. BARRA LATERAL ---
 with st.sidebar:
-    st.markdown("<h2 style='font-size: 1.4rem; color: #0f172a; font-weight: 800; margin-bottom: 20px;'>WMS SONDA</h2>", unsafe_allow_html=True)
-    opcion = st.radio("SECCIONES", ["Inventario", "Entradas", "Salidas"])
+    st.markdown("<h1 style='font-size: 1.5rem;'>📦 WMS SONDA</h1>", unsafe_allow_html=True)
+    seccion = st.radio("MENÚ PRINCIPAL", ["Inventario General", "Movimientos", "Surtido Automático"])
     st.markdown("---")
-    if st.button("🔄 Sincronizar Datos", use_container_width=True):
+    if st.button("🔄 Refrescar Base de Datos"):
         st.cache_data.clear()
-        st.session_state.cuenta_f = "Todas"
         st.rerun()
 
-# --- 6. FUNCIÓN DE INTERFAZ DINÁMICA ---
-def mostrar_interfaz(titulo, df_raw, key_s, usa_fechas=False):
-    df = df_raw.copy()
-    if not df.empty:
-        # --- Selector de Cuentas ---
-        cuentas = ["Todas"] + sorted(df['Cuenta'].unique().tolist()) if 'Cuenta' in df.columns else ["Todas"]
-        st.markdown(f"### Filtrar por Cuenta")
+# --- 6. INTERFAZ: INVENTARIO GENERAL ---
+if seccion == "Inventario General":
+    st.title("📋 Estado de Inventario")
+    
+    if not df_inv_raw.empty:
+        # Filtros persistentes
+        col_f1, col_f2 = st.columns([1, 2])
+        with col_f1:
+            cuentas = ["Todas"] + sorted(df_inv_raw['Cuenta'].unique().tolist())
+            cuenta_sel = st.selectbox("Filtrar por Cuenta:", cuentas)
         
-        n_cols = 6
-        for i in range(0, len(cuentas), n_cols):
-            fila = cuentas[i : i + n_cols]
-            cols = st.columns(n_cols)
-            for j, nombre in enumerate(fila):
-                with cols[j]:
-                    # Resaltar botón seleccionado (opcional, aquí simple)
-                    if st.button(nombre, key=f"btn_{nombre}_{key_s}", use_container_width=True):
-                        st.session_state.cuenta_f = nombre
+        with col_f2:
+            busqueda = st.text_input("🔍 Buscar SKU, Lote o Ubicación:", placeholder="Escribe para filtrar...")
 
-        if usa_fechas:
-            st.markdown("#### Rango de Consulta")
-            f1, f2 = st.columns(2)
-            start_d = f1.date_input("Desde:", datetime.now() - timedelta(days=30), key=f"s_{key_s}")
-            end_d = f2.date_input("Hasta:", datetime.now(), key=f"e_{key_s}")
-            df = df[(df['Fecha'].dt.date >= start_d) & (df['Fecha'].dt.date <= end_d)]
+        # Aplicar Filtros
+        df_f = df_inv_raw.copy()
+        if cuenta_sel != "Todas":
+            df_f = df_f[df_f['Cuenta'] == cuenta_sel]
+        if busqueda:
+            df_f = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)]
 
-        # --- Lógica de Cálculos para la Jarra ---
-        total_global = df['Cantidad'].sum()
-        
-        if st.session_state.cuenta_f != "Todas":
-            df_mostrar = df[df['Cuenta'] == st.session_state.cuenta_f]
-        else:
-            df_mostrar = df
-        
-        total_seleccionado = df_mostrar['Cantidad'].sum()
-        porcentaje = (total_seleccionado / total_global * 100) if total_global > 0 else 0
-        
-        # Ajuste visual para que la ola siempre se vea (entre 5% y 95%)
-        wave_top_val = 100 - max(min(porcentaje, 95), 5)
+        # KPIs y Jarra
+        total_piezas = df_f['Cantidad'].sum()
+        total_total = df_inv_raw['Cantidad'].sum()
+        pct = (total_piezas / total_total * 100) if total_total > 0 else 0
+        w_top = 100 - max(min(pct, 95), 5)
 
-        # --- KPI CON JARRA REDONDA Y OLA ---
         st.markdown(f"""
             <div class="kpi-container">
                 <div class="kpi-text-box">
-                    <p class="label-kpi">PIEZAS EN {st.session_state.cuenta_f}</p>
-                    <h1>{total_seleccionado:,.0f}</h1>
+                    <p class="label-kpi">EXISTENCIAS EN {cuenta_sel.upper()}</p>
+                    <h1>{total_piezas:,.0f}</h1>
                 </div>
                 <div class="water-sphere">
-                    <div class="water-percentage">{porcentaje:.1f}%</div>
-                    <div class="wave wave-back" style="--wave-top: {wave_top_val}%;"></div>
-                    <div class="wave" style="--wave-top: {wave_top_val}%;"></div>
+                    <div class="water-percentage">{pct:.1f}%</div>
+                    <div class="wave wave-back" style="--wave-top: {w_top}%;"></div>
+                    <div class="wave" style="--wave-top: {w_top}%;"></div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-        # --- Buscador y Tabla de Datos ---
-        q = st.text_input(f"🔍 Buscar en {st.session_state.cuenta_f}...", placeholder="SKU, descripción, lote...", key=f"q_{key_s}")
-        if q:
-            mask = df_mostrar.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-            df_mostrar = df_mostrar[mask]
-
-        st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+        st.dataframe(df_f, use_container_width=True, hide_index=True)
         
-        # Exportación
+        # Botón de Descarga
         buf = io.BytesIO()
-        with pd.ExcelWriter(buf, engine='xlsxwriter') as w: 
-            df_mostrar.to_excel(w, index=False)
-        st.download_button(f"📥 Descargar Reporte Excel", buf.getvalue(), f"Reporte_{key_s}.xlsx", use_container_width=True)
-        
-    else:
-        st.warning("No se encontraron datos para mostrar.")
+        df_f.to_excel(buf, index=False, engine='xlsxwriter')
+        st.download_button("📥 Descargar Reporte Excel", buf.getvalue(), "Inventario.xlsx", "application/vnd.ms-excel")
 
-# --- 7. EJECUCIÓN SEGÚN SECCIÓN ---
-if opcion == "Inventario":
-    mostrar_interfaz("Inventario", df_inv_raw, "inv")
-elif opcion == "Entradas":
-    mostrar_interfaz("Entradas", df_ent_raw, "ent", True)
-elif opcion == "Salidas":
-    mostrar_interfaz("Salidas", df_sal_raw, "sal", True)
+# --- 7. INTERFAZ: MOVIMIENTOS (ENTRADAS/SALIDAS) ---
+elif seccion == "Movimientos":
+    tipo_mov = st.tabs(["📥 Entradas", "📤 Salidas"])
+    
+    for i, tab in enumerate(tipo_mov):
+        with tab:
+            df_m = df_ent_raw if i == 0 else df_sal_raw
+            if not df_m.empty:
+                c1, c2, c3 = st.columns([1, 1, 2])
+                f_inicio = c1.date_input("Desde:", datetime.now() - timedelta(days=30), key=f"f1_{i}")
+                f_fin = c2.date_input("Hasta:", datetime.now(), key=f"f2_{i}")
+                
+                # Filtro de fecha
+                df_m = df_m[(df_m['Fecha'].dt.date >= f_inicio) & (df_m['Fecha'].dt.date <= f_fin)]
+                
+                st.dataframe(df_m, use_container_width=True, hide_index=True)
+
+# --- 8. INTERFAZ: SURTIDO AUTOMÁTICO (LA "MACRO" EN WEB) ---
+elif seccion == "Surtido Automático":
+    st.title("⚡ Surtido Inteligente de Stock")
+    st.info("Esta herramienta simula la macro de Excel: busca el SKU y te dice de qué lote y ubicación sacarlo.")
+    
+    col1, col2 = st.columns(2)
+    sku_p = col1.text_input("Ingrese SKU a surtir:")
+    cant_p = col2.number_input("Cantidad necesaria:", min_value=1, step=1)
+    
+    if st.button("Calcular Distribución de Picking"):
+        if sku_p in df_inv_raw['SKU'].values:
+            res_df, faltante = procesar_distribucion(df_inv_raw, sku_p, cant_p)
+            
+            if not res_df.empty:
+                st.subheader("📍 Hoja de Picking Generada")
+                st.table(res_df)
+                if faltante > 0:
+                    st.error(f"⚠️ Stock insuficiente. Faltaron {faltante} unidades por asignar.")
+                else:
+                    st.success("✅ Pedido cubierto totalmente con el stock existente.")
+            else:
+                st.error("No hay stock disponible para este SKU.")
+        else:
+            st.warning("El SKU ingresado no existe en el inventario.")
