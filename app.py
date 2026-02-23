@@ -13,7 +13,7 @@ URL_INVENTARIO = "https://docs.google.com/spreadsheets/d/135jZiPzcgSz64NYybCYa8P
 URL_ENTRADAS = "https://docs.google.com/spreadsheets/d/1mczk_zLZqypIXJY6uQqFj_5ioLHybasecxgNKzlopwc/export?format=csv"
 URL_SALIDAS = "https://docs.google.com/spreadsheets/d/1aB-ODOa6-npqxX_WmWTOQuxYoWE1KxVAGNoSOcYoFck/export?format=csv" 
 
-# --- 2. ESTILOS CSS REFINADOS (GLASSMORPHISM & GRADIENTS) ---
+# --- 2. ESTILOS CSS: GLASSMORPHISM & GRADIENTES ---
 def local_css():
     st.markdown("""
     <style>
@@ -21,78 +21,69 @@ def local_css():
     
     html, body, [class*="css"] { 
         font-family: 'Plus Jakarta Sans', sans-serif; 
-        background-color: #ffffff;
     }
 
-    /* Estilo Glassmorphism para los Botones de Cuentas */
+    /* BOTONES DE CUENTAS (GLASSMORPHISM) */
     div.stButton > button {
         background: rgba(255, 255, 255, 0.4);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 20px;
         color: #1e293b;
-        padding: 12px 20px;
-        font-weight: 600;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        background-image: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.2) 100%);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        padding: 20px 10px;
+        font-weight: 700;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        background-image: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         width: 100%;
+        height: 80px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        font-size: 0.85rem;
+        line-height: 1.2;
     }
 
     div.stButton > button:hover {
-        background-image: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+        background-image: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%) !important;
         color: white !important;
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.3);
+        transform: scale(1.05);
+        box-shadow: 0 12px 20px rgba(37, 99, 235, 0.2);
         border: none;
     }
 
-    /* KPI CONTAINER */
+    /* KPI CONTAINER & JARRA */
     .kpi-container {
         display: flex; align-items: center; justify-content: center; gap: 80px;
-        background: #ffffff; border-radius: 30px; padding: 50px; margin-bottom: 40px;
+        background: #ffffff; border-radius: 30px; padding: 40px; margin-top: 20px;
         border: 1px solid #f8fafc; box-shadow: 0 10px 30px rgba(0,0,0,0.02);
     }
-    .kpi-text-box h1 { 
-        font-size: 5.5rem !important; color: #0f172a !important; 
-        font-weight: 800 !important; letter-spacing: -4px; line-height: 0.9;
-        margin: 0;
-    }
-    .label-kpi { color: #94a3b8; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem; }
+    .kpi-text-box h1 { font-size: 5.5rem !important; color: #0f172a !important; font-weight: 800 !important; letter-spacing: -4px; line-height: 0.9; margin: 0; }
     
-    /* LA JARRA REDONDA */
     .water-sphere {
-        width: 190px; height: 190px; background-color: #f1f5f9; border-radius: 50%;
-        position: relative; overflow: hidden; border: 1px solid #f1f5f9;
-        box-shadow: inset 0 5px 15px rgba(0,0,0,0.03);
+        width: 180px; height: 180px; background-color: #f1f5f9; border-radius: 50%;
+        position: relative; overflow: hidden; border: 1px solid #e2e8f0;
     }
     .wave {
         position: absolute; bottom: 0; left: -50%; width: 200%; height: 200%;
         background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
-        border-radius: 40%; animation: wave-animation 7s infinite linear; 
-        top: var(--wave-top); z-index: 2; transition: top 1.5s ease-in-out;
+        border-radius: 43%; animation: wave-animation 8s infinite linear; 
+        top: var(--wave-top); transition: top 1.5s ease-in-out;
     }
     @keyframes wave-animation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .water-percentage { 
-        position: absolute; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-        text-align: center; color: #1e293b; font-weight: 700; font-size: 1.7rem; z-index: 10; 
-    }
+    .water-percentage { position: absolute; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #1e293b; font-weight: 700; font-size: 1.6rem; z-index: 10; }
     </style>
     """, unsafe_allow_html=True)
 
 local_css()
 
-# --- 3. CARGA DE DATOS (CON LIMPIEZA DE COLUMNAS) ---
+# --- 3. CARGA DE DATOS ---
 @st.cache_data(ttl=60)
 def cargar_datos():
     def fetch(url):
         try:
             df = pd.read_csv(url)
-            # Limpieza de nombres de columnas para evitar KeyError
-            df.columns = df.columns.astype(str).str.strip().str.capitalize()
+            # Normalizar nombres de columnas (Quitar espacios y forzar coincidencia)
+            df.columns = df.columns.astype(str).str.strip()
             if 'Cantidad' in df.columns:
                 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce').fillna(0)
             if 'Fecha' in df.columns:
@@ -101,86 +92,81 @@ def cargar_datos():
         except: return pd.DataFrame()
     return fetch(URL_INVENTARIO), fetch(URL_ENTRADAS), fetch(URL_SALIDAS)
 
-df_inv_raw, df_ent_raw, df_sal_raw = cargar_datos()
+df_inv, df_ent, df_sal = cargar_datos()
 
 # --- 4. ESTADO DE SESIÓN ---
 if 'cuenta_f' not in st.session_state:
     st.session_state.cuenta_f = "Todas"
 
-# --- 5. BARRA LATERAL ---
+# --- 5. SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='font-size: 1.4rem; font-weight: 800;'>WMS SONDA</h2>", unsafe_allow_html=True)
-    seccion = st.radio("SECCIONES", ["Inventario", "Entradas", "Salidas"])
+    st.markdown("<h2 style='font-weight: 800;'>WMS SONDA</h2>", unsafe_allow_html=True)
+    seccion = st.radio("NAVEGACIÓN", ["Inventario", "Entradas", "Salidas"])
     st.markdown("---")
-    if st.button("🔄 Sincronizar Datos", use_container_width=True):
+    if st.button("🔄 Sincronizar Datos"):
         st.cache_data.clear()
         st.session_state.cuenta_f = "Todas"
         st.rerun()
 
 # --- 6. SECCIÓN INVENTARIO ---
 if seccion == "Inventario":
-    if not df_inv_raw.empty:
-        # --- FILTROS GLASSMORPHISM ---
-        # Buscamos la columna 'Cuenta' sin importar si está en minúsculas
-        col_cuenta = 'Cuenta' if 'Cuenta' in df_inv_raw.columns else df_inv_raw.columns[0]
+    if not df_inv.empty:
+        # --- BLINDAJE DE LA COLUMNA "Cuentas" ---
+        # Buscamos la columna que se llame exactamente "Cuentas"
+        target_col = "Cuentas"
         
-        cuentas = ["Todas"] + sorted(df_inv_raw[col_cuenta].dropna().unique().tolist())
-        
-        st.markdown("### Filtrar por Cuenta")
-        n_cols = 5
-        for i in range(0, len(cuentas), n_cols):
-            fila_cuentas = cuentas[i : i + n_cols]
-            cols = st.columns(n_cols)
-            for j, nombre in enumerate(fila_cuentas):
-                with cols[j]:
-                    if st.button(nombre, key=f"btn_{nombre}"):
+        if target_col in df_inv.columns:
+            cuentas_list = ["Todas"] + sorted(df_inv[target_col].dropna().unique().tolist())
+            
+            # --- FILTRO VISUAL DE CAJAS ---
+            st.markdown("### Seleccionar Cuentas")
+            n_cols = 5
+            for i in range(0, len(cuentas_list), n_cols):
+                fila = cuentas_list[i:i + n_cols]
+                cols = st.columns(n_cols)
+                for idx, nombre in enumerate(fila):
+                    if cols[idx].button(nombre, key=f"btn_{nombre}"):
                         st.session_state.cuenta_f = nombre
 
-        # Lógica de filtrado
-        busqueda = st.text_input("🔍 Buscar SKU, Lote o Ubicación:", key="q_inv")
-        
-        df_f = df_inv_raw.copy()
-        if st.session_state.cuenta_f != "Todas":
-            df_f = df_f[df_f[col_cuenta] == st.session_state.cuenta_f]
-        if busqueda:
-            df_f = df_f[df_f.astype(str).apply(lambda x: x.str.contains(busqueda, case=False)).any(axis=1)]
+            st.markdown("---")
+            
+            # Buscador
+            q = st.text_input(f"🔍 Buscando en: {st.session_state.cuenta_f}", placeholder="SKU, Lote, Ubicación...")
+            
+            # Filtrado Lógico
+            df_f = df_inv.copy()
+            if st.session_state.cuenta_f != "Todas":
+                df_f = df_f[df_f[target_col] == st.session_state.cuenta_f]
+            if q:
+                df_f = df_f[df_f.astype(str).apply(lambda x: x.str.contains(q, case=False)).any(axis=1)]
 
-        # KPIs y Jarra
-        total_sel = df_f['Cantidad'].sum() if 'Cantidad' in df_f.columns else 0
-        total_global = df_inv_raw['Cantidad'].sum() if 'Cantidad' in df_inv_raw.columns else 1
-        pct = (total_sel / total_global * 100)
-        w_top = 100 - max(min(pct, 95), 5)
+            # KPIs y Jarra
+            total_p = df_f['Cantidad'].sum()
+            total_g = df_inv['Cantidad'].sum()
+            pct = (total_p / total_g * 100) if total_g > 0 else 0
+            w_top = 100 - max(min(pct, 95), 5)
 
-        st.markdown(f"""
-            <div class="kpi-container">
-                <div class="kpi-text-box">
-                    <p class="label-kpi">PIEZAS EN {st.session_state.cuenta_f}</p>
-                    <h1>{total_sel:,.0f}</h1>
+            st.markdown(f"""
+                <div class="kpi-container">
+                    <div class="kpi-text-box">
+                        <p class="label-kpi">PIEZAS EN {st.session_state.cuenta_f.upper()}</p>
+                        <h1>{total_p:,.0f}</h1>
+                    </div>
+                    <div class="water-sphere">
+                        <div class="water-percentage">{pct:.1f}%</div>
+                        <div class="wave" style="--wave-top: {w_top}%;"></div>
+                    </div>
                 </div>
-                <div class="water-sphere">
-                    <div class="water-percentage">{pct:.1f}%</div>
-                    <div class="wave" style="--wave-top: {w_top}%;"></div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        st.dataframe(df_f, use_container_width=True, hide_index=True)
-    else:
-        st.error("No se pudo leer la columna 'Cuenta'. Verifica tu Google Sheets.")
+            st.dataframe(df_f, use_container_width=True, hide_index=True)
+        else:
+            st.error(f"⚠️ No se encontró la columna '{target_col}' en el Excel. Por favor verifica el nombre.")
+            st.info(f"Columnas detectadas: {list(df_inv.columns)}")
 
-# --- 7. SECCIONES ENTRADAS / SALIDAS ---
+# --- 7. MOVIMIENTOS ---
 elif seccion in ["Entradas", "Salidas"]:
-    df_m = df_ent_raw if seccion == "Entradas" else df_sal_raw
+    df_m = df_ent if seccion == "Entradas" else df_sal
     if not df_m.empty:
         st.markdown(f"### Historial de {seccion}")
-        c1, c2 = st.columns(2)
-        f1 = c1.date_input("Desde:", datetime.now() - timedelta(days=30), key=f"f1_{seccion}")
-        f2 = c2.date_input("Hasta:", datetime.now(), key=f"f2_{seccion}")
-        
-        # Filtrado por fecha
-        if 'Fecha' in df_m.columns:
-            df_m = df_m[(df_m['Fecha'].dt.date >= f1) & (df_m['Fecha'].dt.date <= f2)]
-            
         st.dataframe(df_m, use_container_width=True, hide_index=True)
-    else:
-        st.warning(f"No hay datos para {seccion}.")
