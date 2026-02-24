@@ -56,6 +56,7 @@ def local_css():
         border-radius: 10px !important;
         border: none !important;
         width: 100%;
+        height: 45px !important;
     }
 
     /* KPI CONTAINER & JARRA */
@@ -78,6 +79,9 @@ def local_css():
     }
     @keyframes wave-animation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .water-percentage { position: absolute; width: 100%; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #1e293b; font-weight: 700; font-size: 1.4rem; z-index: 10; }
+    
+    /* Ajuste para inputs de fecha */
+    .stDateInput label { font-weight: 700; color: #64748b; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -93,6 +97,7 @@ def cargar_datos():
             if 'Cantidad' in df.columns:
                 df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce').fillna(0)
             if 'Fecha' in df.columns:
+                # Intentamos parsear la fecha. dayfirst=True para formato DD/MM/YYYY
                 df['Fecha'] = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
             return df
         except: return pd.DataFrame()
@@ -146,30 +151,55 @@ def renderizar_seccion(df_original, titulo_seccion, mostrar_jarra=False):
 
     st.markdown("---")
 
-    # Filtro de búsqueda y descarga
-    c_busq, c_desc = st.columns([3, 1])
+    # --- FILTROS DE BÚSQUEDA Y FECHA ---
+    # Solo mostramos rango de fechas para Entradas y Salidas
+    rango_fechas = None
+    if titulo_seccion in ["Entradas", "Salidas"] and 'Fecha' in df_original.columns:
+        c_busq, c_fecha, c_desc = st.columns([2, 2, 1])
+        with c_fecha:
+            # Calculamos min y max de los datos para el selector
+            f_min_data = df_original['Fecha'].min().date() if not df_original['Fecha'].isnull().all() else datetime.now().date()
+            f_max_data = df_original['Fecha'].max().date() if not df_original['Fecha'].isnull().all() else datetime.now().date()
+            
+            rango_fechas = st.date_input(
+                "📅 Rango de Fechas:",
+                value=(f_min_data, f_max_data),
+                key=f"date_{titulo_seccion}"
+            )
+    else:
+        c_busq, c_desc = st.columns([3, 1])
+
     with c_busq:
         q = st.text_input(f"🔍 Buscando en {st.session_state.cuenta_f}:", key=f"q_{titulo_seccion}")
     
-    # Lógica de filtrado
+    # --- LÓGICA DE FILTRADO ---
     df_f = df_original.copy()
+    
+    # 1. Por Cuenta
     if st.session_state.cuenta_f != "Todas":
         df_f = df_f[df_f[col_target] == st.session_state.cuenta_f]
+    
+    # 2. Por Rango de Fechas (Si aplica)
+    if rango_fechas and len(rango_fechas) == 2:
+        inicio, fin = rango_fechas
+        df_f = df_f[(df_f['Fecha'].dt.date >= inicio) & (df_f['Fecha'].dt.date <= fin)]
+        
+    # 3. Por búsqueda de texto libre
     if q:
         df_f = df_f[df_f.astype(str).apply(lambda x: x.str.contains(q, case=False)).any(axis=1)]
 
-    # Botón de Descarga en la columna derecha
+    # Botón de Descarga
     with c_desc:
-        st.write(" ") # Espaciador
+        st.write(" ") # Espaciador para alinear con los inputs
         excel_data = descargar_excel(df_f, f"Reporte_{titulo_seccion}.xlsx")
         st.download_button(
-            label="📥 Descargar Excel",
+            label="📥 Excel",
             data=excel_data,
             file_name=f"WMS_{titulo_seccion}_{st.session_state.cuenta_f}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-    # Mostrar Jarra y KPI si es Inventario
+    # --- KPIs Y TABLA ---
     if mostrar_jarra:
         total_p = df_f['Cantidad'].sum()
         total_g = df_original['Cantidad'].sum()
