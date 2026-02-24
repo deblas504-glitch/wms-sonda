@@ -29,25 +29,33 @@ def local_css():
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: 20px;
+        border-radius: 15px;
         color: #1e293b;
-        padding: 15px 10px;
+        padding: 10px;
         font-weight: 700;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.4s ease;
         background-image: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.2) 100%);
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         width: 100%;
-        height: 70px;
+        height: 60px;
         text-transform: uppercase;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     div.stButton > button:hover {
         background-image: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%) !important;
         color: white !important;
-        transform: scale(1.02);
-        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+        transform: translateY(-2px);
         border: none;
+    }
+
+    /* ESTILO BOTÓN EXCEL (VERDE) */
+    .stDownloadButton > button {
+        background-color: #16a34a !important;
+        color: white !important;
+        border-radius: 10px !important;
+        border: none !important;
+        width: 100%;
     }
 
     /* KPI CONTAINER & JARRA */
@@ -106,38 +114,42 @@ with st.sidebar:
         st.session_state.cuenta_f = "Todas"
         st.rerun()
 
-# --- 6. FUNCIÓN DE INTERFAZ UNIFICADA ---
+# --- 6. FUNCIÓN DE EXCEL ---
+def descargar_excel(df, nombre_archivo):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Reporte')
+    return output.getvalue()
+
+# --- 7. FUNCIÓN DE INTERFAZ UNIFICADA ---
 def renderizar_seccion(df_original, titulo_seccion, mostrar_jarra=False):
     if df_original.empty:
         st.error(f"No hay datos disponibles en {titulo_seccion}.")
         return
 
-    # Blindaje de la columna "Cuentas"
     col_target = "Cuentas"
     if col_target not in df_original.columns:
         st.error(f"⚠️ No se encontró la columna '{col_target}' en esta hoja.")
-        st.info(f"Columnas detectadas: {list(df_original.columns)}")
         return
 
     # --- FILTRO VISUAL DE CAJAS ---
     cuentas_list = ["Todas"] + sorted(df_original[col_target].dropna().unique().tolist())
     st.markdown(f"### Filtrar {titulo_seccion} por Cuenta")
     
-    n_cols = 5
+    n_cols = 6
     for i in range(0, len(cuentas_list), n_cols):
         fila = cuentas_list[i:i + n_cols]
         cols = st.columns(n_cols)
         for idx, nombre in enumerate(fila):
-            # Key única por sección y nombre para evitar conflictos
             if cols[idx].button(nombre, key=f"btn_{titulo_seccion}_{nombre}"):
                 st.session_state.cuenta_f = nombre
 
     st.markdown("---")
 
-    # Filtros adicionales
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        q = st.text_input(f"🔍 Buscar en {st.session_state.cuenta_f}:", key=f"q_{titulo_seccion}")
+    # Filtro de búsqueda y descarga
+    c_busq, c_desc = st.columns([3, 1])
+    with c_busq:
+        q = st.text_input(f"🔍 Buscando en {st.session_state.cuenta_f}:", key=f"q_{titulo_seccion}")
     
     # Lógica de filtrado
     df_f = df_original.copy()
@@ -145,6 +157,17 @@ def renderizar_seccion(df_original, titulo_seccion, mostrar_jarra=False):
         df_f = df_f[df_f[col_target] == st.session_state.cuenta_f]
     if q:
         df_f = df_f[df_f.astype(str).apply(lambda x: x.str.contains(q, case=False)).any(axis=1)]
+
+    # Botón de Descarga en la columna derecha
+    with c_desc:
+        st.write(" ") # Espaciador
+        excel_data = descargar_excel(df_f, f"Reporte_{titulo_seccion}.xlsx")
+        st.download_button(
+            label="📥 Descargar Excel",
+            data=excel_data,
+            file_name=f"WMS_{titulo_seccion}_{st.session_state.cuenta_f}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     # Mostrar Jarra y KPI si es Inventario
     if mostrar_jarra:
@@ -156,7 +179,7 @@ def renderizar_seccion(df_original, titulo_seccion, mostrar_jarra=False):
         st.markdown(f"""
             <div class="kpi-container">
                 <div class="kpi-text-box">
-                    <p class="label-kpi">PIEZAS EN {st.session_state.cuenta_f.upper()}</p>
+                    <p class="label-kpi">EXISTENCIA EN {st.session_state.cuenta_f.upper()}</p>
                     <h1>{total_p:,.0f}</h1>
                 </div>
                 <div class="water-sphere">
@@ -166,13 +189,12 @@ def renderizar_seccion(df_original, titulo_seccion, mostrar_jarra=False):
             </div>
         """, unsafe_allow_html=True)
     else:
-        # Para Entradas/Salidas mostrar solo un KPI simple o contador
         total_mov = df_f['Cantidad'].sum()
-        st.metric(f"Total Unidades ({st.session_state.cuenta_f})", f"{total_mov:,.0f}")
+        st.metric(f"Total Unidades en {st.session_state.cuenta_f}", f"{total_mov:,.0f}")
 
     st.dataframe(df_f, use_container_width=True, hide_index=True)
 
-# --- 7. EJECUCIÓN ---
+# --- 8. EJECUCIÓN ---
 if seccion == "Inventario":
     renderizar_seccion(df_inv, "Inventario", mostrar_jarra=True)
 elif seccion == "Entradas":
